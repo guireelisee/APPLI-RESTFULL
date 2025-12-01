@@ -50,11 +50,11 @@
                             "type": "value",
                             "options": {
                                 "0": {
-                                    "text": "❌ Non Synchronisé",
+                                    "text": "Non Synchronisé",
                                     "color": "red"
                                 },
                                 "1": {
-                                    "text": "✅ Synchronisé",
+                                    "text": "Synchronisé",
                                     "color": "green"
                                 }
                             }
