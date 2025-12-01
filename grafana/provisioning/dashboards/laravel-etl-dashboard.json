@@ -1,0 +1,397 @@
+{
+    "id": null,
+    "uid": "laravel-etl",
+    "title": "Laravel ETL - Synchronisation Kafka",
+    "tags": ["laravel", "kafka", "etl", "postgresql"],
+    "timezone": "browser",
+    "schemaVersion": 38,
+    "version": 0,
+    "refresh": "10s",
+    "time": {
+        "from": "now-15m",
+        "to": "now"
+    },
+    "timepicker": {},
+    "panels": [
+        {
+            "id": 1,
+            "gridPos": {
+                "h": 6,
+                "w": 12,
+                "x": 0,
+                "y": 0
+            },
+            "type": "stat",
+            "title": "Statut de Synchronisation",
+            "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+            },
+            "targets": [
+                {
+                    "expr": "laravel_sync_status",
+                    "refId": "A"
+                }
+            ],
+            "options": {
+                "reduceOptions": {
+                    "values": false,
+                    "calcs": ["lastNotNull"]
+                },
+                "orientation": "auto",
+                "textMode": "value_and_name",
+                "colorMode": "background",
+                "graphMode": "none"
+            },
+            "fieldConfig": {
+                "defaults": {
+                    "mappings": [
+                        {
+                            "type": "value",
+                            "options": {
+                                "0": {
+                                    "text": "❌ Non Synchronisé",
+                                    "color": "red"
+                                },
+                                "1": {
+                                    "text": "✅ Synchronisé",
+                                    "color": "green"
+                                }
+                            }
+                        }
+                    ],
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "value": null,
+                                "color": "red"
+                            },
+                            {
+                                "value": 1,
+                                "color": "green"
+                            }
+                        ]
+                    },
+                    "unit": "none"
+                }
+            }
+        },
+        {
+            "id": 2,
+            "gridPos": {
+                "h": 6,
+                "w": 12,
+                "x": 12,
+                "y": 0
+            },
+            "type": "gauge",
+            "title": "Écart de Synchronisation",
+            "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+            },
+            "targets": [
+                {
+                    "expr": "laravel_clients_sync_diff",
+                    "refId": "A",
+                    "legendFormat": "Clients"
+                },
+                {
+                    "expr": "laravel_reservations_sync_diff",
+                    "refId": "B",
+                    "legendFormat": "Réservations"
+                }
+            ],
+            "options": {
+                "reduceOptions": {
+                    "values": false,
+                    "calcs": ["lastNotNull"]
+                },
+                "orientation": "auto",
+                "showThresholdLabels": true,
+                "showThresholdMarkers": true
+            },
+            "fieldConfig": {
+                "defaults": {
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "value": null,
+                                "color": "green"
+                            },
+                            {
+                                "value": 1,
+                                "color": "orange"
+                            },
+                            {
+                                "value": 10,
+                                "color": "red"
+                            }
+                        ]
+                    },
+                    "unit": "short",
+                    "max": 50
+                }
+            }
+        },
+        {
+            "id": 3,
+            "gridPos": {
+                "h": 8,
+                "w": 24,
+                "x": 0,
+                "y": 6
+            },
+            "type": "timeseries",
+            "title": "Synchronisation des Clients",
+            "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+            },
+            "targets": [
+                {
+                    "expr": "laravel_clients_source_total",
+                    "refId": "A",
+                    "legendFormat": "Source"
+                },
+                {
+                    "expr": "laravel_clients_target_total",
+                    "refId": "B",
+                    "legendFormat": "Target"
+                }
+            ],
+            "options": {
+                "tooltip": {
+                    "mode": "multi",
+                    "sort": "none"
+                },
+                "legend": {
+                    "displayMode": "list",
+                    "placement": "bottom",
+                    "showLegend": true,
+                    "calcs": ["last", "max"]
+                }
+            },
+            "fieldConfig": {
+                "defaults": {
+                    "custom": {
+                        "lineWidth": 2,
+                        "fillOpacity": 10,
+                        "lineInterpolation": "smooth",
+                        "showPoints": "auto"
+                    },
+                    "unit": "short",
+                    "decimals": 0
+                },
+                "overrides": [
+                    {
+                        "matcher": {
+                            "id": "byRegexp",
+                            "options": ".*Source"
+                        },
+                        "properties": [
+                            {
+                                "id": "color",
+                                "value": {
+                                    "mode": "fixed",
+                                    "fixedColor": "blue"
+                                }
+                            }
+                        ]
+                    },
+                    {
+                        "matcher": {
+                            "id": "byRegexp",
+                            "options": ".*Target"
+                        },
+                        "properties": [
+                            {
+                                "id": "color",
+                                "value": {
+                                    "mode": "fixed",
+                                    "fixedColor": "green"
+                                }
+                            }
+                        ]
+                    }
+                ]
+            }
+        },
+        {
+            "id": 4,
+            "gridPos": {
+                "h": 8,
+                "w": 24,
+                "x": 0,
+                "y": 14
+            },
+            "type": "timeseries",
+            "title": "Synchronisation des Réservations",
+            "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+            },
+            "targets": [
+                {
+                    "expr": "laravel_reservations_source_total",
+                    "refId": "A",
+                    "legendFormat": "Source"
+                },
+                {
+                    "expr": "laravel_reservations_target_total",
+                    "refId": "B",
+                    "legendFormat": "Target"
+                }
+            ],
+            "options": {
+                "tooltip": {
+                    "mode": "multi",
+                    "sort": "none"
+                },
+                "legend": {
+                    "displayMode": "list",
+                    "placement": "bottom",
+                    "showLegend": true,
+                    "calcs": ["last", "max"]
+                }
+            },
+            "fieldConfig": {
+                "defaults": {
+                    "custom": {
+                        "lineWidth": 2,
+                        "fillOpacity": 10,
+                        "lineInterpolation": "smooth",
+                        "showPoints": "auto"
+                    },
+                    "unit": "short",
+                    "decimals": 0
+                },
+                "overrides": [
+                    {
+                        "matcher": {
+                            "id": "byRegexp",
+                            "options": ".*Source"
+                        },
+                        "properties": [
+                            {
+                                "id": "color",
+                                "value": {
+                                    "mode": "fixed",
+                                    "fixedColor": "blue"
+                                }
+                            }
+                        ]
+                    },
+                    {
+                        "matcher": {
+                            "id": "byRegexp",
+                            "options": ".*Target"
+                        },
+                        "properties": [
+                            {
+                                "id": "color",
+                                "value": {
+                                    "mode": "fixed",
+                                    "fixedColor": "green"
+                                }
+                            }
+                        ]
+                    }
+                ]
+            }
+        },
+        {
+            "id": 5,
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 0,
+                "y": 22
+            },
+            "type": "barchart",
+            "title": "Réservations par Statut",
+            "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+            },
+            "targets": [
+                {
+                    "expr": "laravel_reservations_by_status",
+                    "refId": "A",
+                    "legendFormat": "{{statut}}"
+                }
+            ],
+            "options": {
+                "orientation": "horizontal",
+                "showValue": "always",
+                "legend": {
+                    "displayMode": "list",
+                    "placement": "bottom",
+                    "showLegend": true
+                }
+            },
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "short",
+                    "decimals": 0,
+                    "color": {
+                        "mode": "palette-classic"
+                    }
+                }
+            }
+        },
+        {
+            "id": 6,
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 12,
+                "y": 22
+            },
+            "type": "bargauge",
+            "title": "Comparaison Source vs Target",
+            "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+            },
+            "targets": [
+                {
+                    "expr": "laravel_clients_source_total",
+                    "refId": "A",
+                    "legendFormat": "Clients Source"
+                },
+                {
+                    "expr": "laravel_clients_target_total",
+                    "refId": "B",
+                    "legendFormat": "Clients Target"
+                },
+                {
+                    "expr": "laravel_reservations_source_total",
+                    "refId": "C",
+                    "legendFormat": "Réservations Source"
+                },
+                {
+                    "expr": "laravel_reservations_target_total",
+                    "refId": "D",
+                    "legendFormat": "Réservations Target"
+                }
+            ],
+            "options": {
+                "orientation": "horizontal",
+                "displayMode": "gradient",
+                "showUnfilled": true
+            },
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "short",
+                    "decimals": 0,
+                    "color": {
+                        "mode": "palette-classic"
+                    }
+                }
+            }
+        }
+    ]
+}

@@ -1,13 +1,23 @@
 global:
-  scrape_interval: 30s
-  evaluation_interval: 30s
+  scrape_interval: 15s
+  evaluation_interval: 15s
 
 scrape_configs:
-  # Laravel (tournera en local sur ton Mac)
-  - job_name: 'laravel'
+  # Laravel API (local)
+  - job_name: 'laravel_api'
     static_configs:
       - targets: ['host.docker.internal:8000']
     metrics_path: '/metrics'
+
+  # PostgreSQL Source
+  - job_name: 'postgres_source'
+    static_configs:
+      - targets: ['postgres_exporter_source:9187']
+
+  # PostgreSQL Target
+  - job_name: 'postgres_target'
+    static_configs:
+      - targets: ['postgres_exporter_target:9187']
 
   # Prometheus
   - job_name: 'prometheus'

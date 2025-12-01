@@ -16,10 +16,12 @@ services:
       - "5434:5432"
     volumes:
       - db_source_data:/var/lib/postgresql/data
+    networks:
+      - app_network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U laravel_user"]
-      interval: 5s
-      timeout: 3s
+      test: ["CMD-SHELL", "pg_isready -U laravel_user -d db_source"]
+      interval: 10s
+      timeout: 5s
       retries: 5
 
   # ============================================
@@ -37,14 +39,16 @@ services:
       - "5435:5432"
     volumes:
       - db_target_data:/var/lib/postgresql/data
+    networks:
+      - app_network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U laravel_user"]
-      interval: 5s
-      timeout: 3s
+      test: ["CMD-SHELL", "pg_isready -U laravel_user -d db_target"]
+      interval: 10s
+      timeout: 5s
       retries: 5
 
   # ============================================
-  # ZOOKEEPER
+  # ZOOKEEPER (requis pour Kafka)
   # ============================================
   zookeeper:
     image: confluentinc/cp-zookeeper:7.5.0
@@ -57,9 +61,11 @@ services:
       - "2181:2181"
     volumes:
       - zookeeper_data:/var/lib/zookeeper
+    networks:
+      - app_network
 
   # ============================================
-  # KAFKA
+  # KAFKA BROKER
   # ============================================
   kafka:
     image: confluentinc/cp-kafka:7.5.0
@@ -80,6 +86,8 @@ services:
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
     volumes:
       - kafka_data:/var/lib/kafka/data
+    networks:
+      - app_network
     healthcheck:
       test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
       interval: 10s
@@ -87,47 +95,7 @@ services:
       retries: 10
 
   # ============================================
-  # KAFKA CONSUMERS (dans Docker avec rdkafka)
-  # ============================================
-  kafka_consumers:
-    image: php:8.3-cli-alpine
-    container_name: kafka_consumers
-    restart: unless-stopped
-    working_dir: /var/www
-    volumes:
-      - ./:/var/www
-    depends_on:
-      - db_source
-      - db_target
-      - kafka
-    environment:
-      DB_CONNECTION: pgsql
-      DB_HOST: db_source
-      DB_PORT: 5432
-      DB_DATABASE: db_source
-      DB_USERNAME: laravel_user
-      DB_PASSWORD: laravel_password
-      DB_CONNECTION_SECOND: pgsql
-      DB_HOST_SECOND: db_target
-      DB_PORT_SECOND: 5432
-      DB_DATABASE_SECOND: db_target
-      DB_USERNAME_SECOND: laravel_user
-      DB_PASSWORD_SECOND: laravel_password
-      KAFKA_BROKERS: kafka:9092
-    entrypoint: /bin/sh
-    command: |
-      -c "
-      apk add --no-cache librdkafka-dev postgresql-dev autoconf g++ make &&
-      docker-php-ext-install pdo pdo_pgsql &&
-      pecl install rdkafka &&
-      docker-php-ext-enable rdkafka &&
-      php artisan kafka:consume-clients &
-      php artisan kafka:consume-reservations &
-      wait
-      "
-
-  # ============================================
-  # KAFKA UI
+  # KAFKA UI (Interface web)
   # ============================================
   kafka_ui:
     image: provectuslabs/kafka-ui:latest
@@ -141,6 +109,90 @@ services:
       KAFKA_CLUSTERS_0_NAME: local
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
       KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
+    networks:
+      - app_network
+
+  # ============================================
+  # KAFKA PRODUCER (HTTP Service)
+  # ============================================
+  kafka_producer:
+    build:
+      context: ./kafka-producer
+      dockerfile: Dockerfile
+    container_name: kafka_producer
+    restart: unless-stopped
+    depends_on:
+      kafka:
+        condition: service_healthy
+    ports:
+      - "5001:5001"
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    networks:
+      - app_network
+    volumes:
+      - ./kafka-producer:/app
+
+  # ============================================
+  # KAFKA CONSUMER (Python ETL)
+  # ============================================
+  kafka_consumer:
+    build:
+      context: ./kafka-consumer
+      dockerfile: Dockerfile
+    container_name: kafka_consumer
+    restart: unless-stopped
+    depends_on:
+      kafka:
+        condition: service_healthy
+      db_target:
+        condition: service_healthy
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_GROUP_ID: laravel_etl_group
+      DB_TARGET_HOST: db_target
+      DB_TARGET_PORT: 5432
+      DB_TARGET_DB: db_target
+      DB_TARGET_USER: laravel_user
+      DB_TARGET_PASSWORD: laravel_password
+    networks:
+      - app_network
+    volumes:
+      - ./kafka-consumer:/app
+
+  # ============================================
+  # POSTGRES EXPORTER - SOURCE
+  # ============================================
+  postgres_exporter_source:
+    image: prometheuscommunity/postgres-exporter:latest
+    container_name: postgres_exporter_source
+    restart: unless-stopped
+    environment:
+      DATA_SOURCE_NAME: "postgresql://laravel_user:laravel_password@db_source:5432/db_source?sslmode=disable"
+    ports:
+      - "9187:9187"
+    depends_on:
+      db_source:
+        condition: service_healthy
+    networks:
+      - app_network
+
+  # ============================================
+  # POSTGRES EXPORTER - TARGET
+  # ============================================
+  postgres_exporter_target:
+    image: prometheuscommunity/postgres-exporter:latest
+    container_name: postgres_exporter_target
+    restart: unless-stopped
+    environment:
+      DATA_SOURCE_NAME: "postgresql://laravel_user:laravel_password@db_target:5432/db_target?sslmode=disable"
+    ports:
+      - "9188:9187"
+    depends_on:
+      db_target:
+        condition: service_healthy
+    networks:
+      - app_network
 
   # ============================================
   # PROMETHEUS
@@ -157,6 +209,8 @@ services:
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
+    networks:
+      - app_network
 
   # ============================================
   # GRAFANA
@@ -170,11 +224,20 @@ services:
     environment:
       GF_SECURITY_ADMIN_USER: admin
       GF_SECURITY_ADMIN_PASSWORD: admin123
+      GF_INSTALL_PLUGINS: ""
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /etc/grafana/provisioning/dashboards/home.json
     volumes:
       - grafana_data:/var/lib/grafana
-      - ./grafana/provisioning:/etc/grafana/provisioning
+      - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
+      - ./grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
     depends_on:
       - prometheus
+    networks:
+      - app_network
+
+networks:
+  app_network:
+    driver: bridge
 
 volumes:
   db_source_data:
