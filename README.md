@@ -155,7 +155,7 @@ php artisan serve
 
 ---
 
-## 📖 Utilisation
+## Utilisation
 
 ### Créer un client
 
