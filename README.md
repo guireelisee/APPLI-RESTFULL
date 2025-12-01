@@ -85,7 +85,6 @@ Développer une application _Restfull avec Laravel_, en utilisant _WSO2 ou apach
 | Kafka UI          | 8080 |
 | Prometheus        | 9090 |
 | Grafana           | 3000 |
-| pgAdmin           | 5050 |
 
 ⚠️ **Assurez-vous que ces ports sont libres avant de lancer le projet.**
 
