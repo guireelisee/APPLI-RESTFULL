@@ -229,6 +229,7 @@ URL: http://localhost:8000
 
 **Endpoints principaux :**
 
+-   `GET /` - Vérifier l'état de l'API
 -   `GET /api/v1/clients` - Liste des clients
 -   `POST /api/v1/clients` - Créer un client
 -   `GET /api/v1/clients/{id}` - Détails d'un client
