@@ -224,7 +224,7 @@ curl http://localhost:8000/api/v1/sync-stats
 ### Laravel API
 
 ```
-URL: http://localhost:8000/api/v1
+URL: http://localhost:8000
 ```
 
 **Endpoints principaux :**
