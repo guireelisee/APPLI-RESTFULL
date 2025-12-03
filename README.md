@@ -101,7 +101,7 @@ cd laravel-reservation-api
 
 ### 2. Configuration
 
-Copier le fichier `.env.example` et configurer :
+Copier le fichier `.env.example` et vérifier la configuration :
 
 ```bash
 cp .env.example .env
